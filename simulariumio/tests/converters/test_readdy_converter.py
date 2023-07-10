@@ -3,7 +3,6 @@
 
 import numpy as np
 import pytest
-from unittest.mock import Mock
 
 from simulariumio.readdy import ReaddyConverter, ReaddyData
 from simulariumio import UnitData, MetaData, DisplayData, JsonWriter
@@ -13,7 +12,6 @@ from simulariumio.constants import (
     DEFAULT_BOX_SIZE,
     VIZ_TYPE,
 )
-from simulariumio.exceptions import InputDataError
 
 
 data = ReaddyData(
@@ -426,38 +424,3 @@ def test_bundleData_ignored_types(bundleData, expected_bundleData):
 
 def test_agent_ids_ignored_types():
     assert JsonWriter._check_agent_ids_are_unique_per_frame(results_display_data)
-
-
-def test_input_file_error():
-    # a .txt file should trigger an error when trying to read the data
-    txt_file = ReaddyData(
-        timestep=0.1,
-        path_to_readdy_h5="simulariumio/tests/data/smoldyn/example_data.txt",
-    )
-    with pytest.raises(InputDataError):
-        ReaddyConverter(txt_file)
-
-    # also expect an error for a json file
-    json_file = ReaddyData(
-        timestep=0.1,
-        path_to_readdy_h5="simulariumio/tests/data/cellpack/mock_results.json",
-    )
-    with pytest.raises(InputDataError):
-        ReaddyConverter(json_file)
-
-
-def test_callback_fn():
-    callback_fn_0 = Mock()
-    call_interval = 0.000000001
-    ReaddyConverter(data, callback_fn_0, call_interval)
-    assert callback_fn_0.call_count > 1
-
-    # calls to the callback function should be strictly increasing
-    # and the value should never exceed 1.0 (100%)
-    call_list = callback_fn_0.call_args_list
-    last_call_val = -1.0
-    for call in call_list:
-        call_value = call.args[0]
-        assert call_value > last_call_val
-        assert call_value <= 1.0 and call_value >= 0.0
-        last_call_val = call_value

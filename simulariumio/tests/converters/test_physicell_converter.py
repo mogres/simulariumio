@@ -3,7 +3,6 @@
 
 import numpy as np
 import pytest
-from unittest.mock import Mock
 
 from simulariumio.physicell import PhysicellConverter, PhysicellData
 from simulariumio import MetaData, DisplayData, JsonWriter, UnitData
@@ -11,9 +10,8 @@ from simulariumio.constants import (
     DEFAULT_BOX_SIZE,
     DEFAULT_COLORS,
     DISPLAY_TYPE,
-    VIZ_TYPE,
+    VIZ_TYPE
 )
-from simulariumio.exceptions import InputDataError
 
 data = PhysicellData(
     timestep=360.0,
@@ -679,8 +677,8 @@ def test_typeMapping_subcells(typeMapping, expected_typeMapping):
                 0,
                 0,
                 0,
-            ],
-        ),
+            ]
+        )
     ],
 )
 def test_bundleData(bundleData, expected_bundleData):
@@ -708,7 +706,7 @@ def test_agent_ids():
                 "path_to_output_dir": "../simulariumio/tests/data/physicell/",
             },
             {},
-            marks=pytest.mark.raises(exception=InputDataError),
+            marks=pytest.mark.raises(exception=AttributeError),
         ),
     ],
 )
@@ -716,40 +714,3 @@ def test_bad_path_to_output_dir(trajectory, expected_data):
     converter = PhysicellConverter(trajectory)
     buffer_data = JsonWriter.format_trajectory_data(converter._data)
     assert expected_data == buffer_data
-
-
-def test_input_file_error():
-    # path to a file, not a directory
-    invalid_data_0 = PhysicellData(
-        timestep=360.0,
-        path_to_output_dir=(
-            "simulariumio/tests/data/physicell/default_output/output00000000.xml",
-        )
-    )
-    with pytest.raises(InputDataError):
-        PhysicellConverter(invalid_data_0)
-
-    # path to directory with no output files
-    invalid_data_1 = PhysicellData(
-        timestep=360.0,
-        path_to_output_dir="simulariumio/tests/data/physicell/",
-    )
-    with pytest.raises(InputDataError):
-        PhysicellConverter(invalid_data_1)
-
-
-def test_callback_fn():
-    callback_fn_0 = Mock()
-    call_interval = 0.000000001
-    PhysicellConverter(data, callback_fn_0, call_interval)
-    assert callback_fn_0.call_count > 1
-
-    # calls to the callback function should be strictly increasing
-    # and the value should never exceed 1.0 (100%)
-    call_list = callback_fn_0.call_args_list
-    last_call_val = -1.0
-    for call in call_list:
-        call_value = call.args[0]
-        assert call_value > last_call_val
-        assert call_value <= 1.0 and call_value >= 0.0
-        last_call_val = call_value

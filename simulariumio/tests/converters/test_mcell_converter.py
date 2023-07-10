@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from unittest.mock import Mock
+
 import numpy as np
 
 from simulariumio.mcell import McellConverter, McellData
@@ -12,7 +12,6 @@ from simulariumio.constants import (
     DISPLAY_TYPE,
     VIZ_TYPE,
 )
-from simulariumio.exceptions import InputDataError
 
 data = McellData(
     path_to_data_model_json="simulariumio/tests/data/mcell/"
@@ -272,38 +271,3 @@ def test_rotation_matrix(v1, v2, expected_result):
 def test_get_euler_angles(v1, expected_result):
     euler_angles = McellConverter._get_euler_angles(v1, 45)
     assert (euler_angles == expected_result).all()
-
-
-def test_input_file_error():
-    invalid_json = McellData(
-        path_to_data_model_json="simulariumio/tests/data/md/example.xyz",
-        path_to_binary_files="simulariumio/tests/data/mcell/organelle_model_viz_output",
-    )
-    with pytest.raises(InputDataError):
-        McellConverter(invalid_json)
-
-    wrong_bin = McellData(
-        path_to_data_model_json="simulariumio/tests/data/mcell/"
-        "organelle_model_viz_output/Scene.data_model.00.json",
-        path_to_binary_files="simulariumio/tests/data/mcell/"
-        "organelle_model_example_files/mcell/output_data/react_data/seed_00001",
-    )
-    with pytest.raises(InputDataError):
-        McellConverter(wrong_bin)
-
-
-def test_callback_fn():
-    callback_fn_0 = Mock()
-    call_interval = 0.000000001
-    McellConverter(data, callback_fn_0, call_interval)
-    assert callback_fn_0.call_count > 1
-
-    # calls to the callback function should be strictly increasing
-    # and the value should never exceed 1.0 (100%)
-    call_list = callback_fn_0.call_args_list
-    last_call_val = 0.0
-    for call in call_list:
-        call_value = call.args[0]
-        assert call_value >= last_call_val
-        assert call_value <= 1.0
-        last_call_val = call_value

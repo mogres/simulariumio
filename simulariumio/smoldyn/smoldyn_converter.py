@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from typing import List, Callable
+from typing import List
+
 import numpy as np
 
 from ..trajectory_converter import TrajectoryConverter
 from ..data_objects import TrajectoryData, AgentData, DimensionData
-from ..exceptions import InputDataError
 from .smoldyn_data import SmoldynData
 
 ###############################################################################
@@ -18,12 +18,7 @@ log = logging.getLogger(__name__)
 
 
 class SmoldynConverter(TrajectoryConverter):
-    def __init__(
-        self,
-        input_data: SmoldynData,
-        progress_callback: Callable[[float], None] = None,
-        callback_interval: float = 10,
-    ):
+    def __init__(self, input_data: SmoldynData):
         """
         This object reads simulation trajectory outputs
         from Smoldyn (http://www.smoldyn.org)
@@ -35,17 +30,7 @@ class SmoldynConverter(TrajectoryConverter):
         input_data : SmoldynData
             An object containing info for reading
             Smoldyn simulation trajectory outputs and plot data
-        progress_callback : Callable [[float], None] (optional)
-            Callback function that accepts 1 float argument and returns None
-            which will be called at a given progress interval, determined by
-            callback_interval requested, providing the current percent progress
-            Default: None
-        callback_interval : float (optional)
-            If a progress_callback was provided, the period between updates
-            to be sent to the callback, in seconds
-            Default: 10
         """
-        super().__init__(input_data, progress_callback, callback_interval)
         self._data = self._read(input_data)
 
     @staticmethod
@@ -69,8 +54,8 @@ class SmoldynConverter(TrajectoryConverter):
             result.max_agents = agents
         return result
 
+    @staticmethod
     def _parse_objects(
-        self,
         smoldyn_data_lines: List[str],
         input_data: SmoldynData,
     ) -> AgentData:
@@ -81,8 +66,6 @@ class SmoldynConverter(TrajectoryConverter):
         result = AgentData.from_dimensions(dimensions)
         time_index = -1
         agent_index = 0
-        line_count = 0
-
         for line in smoldyn_data_lines:
             if len(line) < 1:
                 continue
@@ -95,7 +78,7 @@ class SmoldynConverter(TrajectoryConverter):
                 result.times[time_index] = float(cols[0])
             else:
                 if len(cols) < 4:
-                    raise InputDataError(
+                    raise Exception(
                         "Smoldyn data is not formatted as expected, "
                         "please use the Smoldyn `listmols` command for output"
                     )
@@ -132,25 +115,20 @@ class SmoldynConverter(TrajectoryConverter):
                     else 1.0
                 )
                 agent_index += 1
-            line_count += 1
-            self.check_report_progress(line_count / len(smoldyn_data_lines))
-
         result.n_agents[time_index] = agent_index
         result.n_timesteps = time_index + 1
         return result
 
-    def _read(self, input_data: SmoldynData) -> TrajectoryData:
+    @staticmethod
+    def _read(input_data: SmoldynData) -> TrajectoryData:
         """
         Return a TrajectoryData object containing the Smoldyn data
         """
         print("Reading Smoldyn Data -------------")
         # load the data from Smoldyn output .txt file
-        try:
-            smoldyn_data = input_data.smoldyn_file.get_contents().split("\n")
-        except Exception as e:
-            raise InputDataError(f"Error reading input smoldyn data: {e}")
+        smoldyn_data = input_data.smoldyn_file.get_contents().split("\n")
         # parse
-        agent_data = self._parse_objects(smoldyn_data, input_data)
+        agent_data = SmoldynConverter._parse_objects(smoldyn_data, input_data)
         # get display data (geometry and color)
         for tid in input_data.display_data:
             display_data = input_data.display_data[tid]

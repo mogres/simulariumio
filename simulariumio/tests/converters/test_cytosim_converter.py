@@ -3,7 +3,6 @@
 
 import pytest
 import numpy as np
-from unittest.mock import Mock
 
 from simulariumio import JsonWriter
 from simulariumio.cytosim import (
@@ -17,7 +16,6 @@ from simulariumio.constants import (
     DEFAULT_BOX_SIZE,
     VIZ_TYPE,
 )
-from simulariumio.exceptions import InputDataError
 
 data = CytosimData(
     object_info={
@@ -340,53 +338,3 @@ def test_parse_dimensions():
     assert dimension_data.total_steps == 3
     assert dimension_data.max_agents == 19
     assert dimension_data.max_subpoints == 18
-
-
-def test_input_file_error():
-    # throws an error when the file is the right type, but is malformed
-    malformed_data = CytosimData(
-        object_info={
-            "fibers": CytosimObjectInfo(
-                cytosim_file=InputFileData(
-                    file_path=(
-                        "simulariumio/tests/data/malformed_data/malformed_cytosim.txt"
-                    ),
-                ),
-            )
-        },
-    )
-    with pytest.raises(InputDataError):
-        CytosimConverter(malformed_data)
-
-    # throws an error for a file type it can't read
-    wrong_file = CytosimData(
-        object_info={
-            "fibers": CytosimObjectInfo(
-                cytosim_file=InputFileData(
-                    file_path=(
-                        "simulariumio/tests/data/physicell/"
-                        "default_output/initial_cells.mat"
-                    ),
-                ),
-            )
-        },
-    )
-    with pytest.raises(InputDataError):
-        CytosimConverter(wrong_file)
-
-
-def test_callback_fn():
-    callback_fn_0 = Mock()
-    call_interval = 0.000000001
-    CytosimConverter(aster_pull3D_objects, callback_fn_0, call_interval)
-    assert callback_fn_0.call_count > 1
-
-    # calls to the callback function should be strictly increasing
-    # and the value should never exceed 1.0 (100%)
-    call_list = callback_fn_0.call_args_list
-    last_call_val = 0.0
-    for call in call_list:
-        call_value = call.args[0]
-        assert call_value > last_call_val
-        assert call_value <= 1.0
-        last_call_val = call_value

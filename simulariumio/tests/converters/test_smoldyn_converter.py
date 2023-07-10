@@ -3,7 +3,6 @@
 
 import pytest
 import numpy as np
-from unittest.mock import Mock
 
 from simulariumio.smoldyn import (
     SmoldynConverter,
@@ -16,7 +15,6 @@ from simulariumio.constants import (
     DISPLAY_TYPE,
     VIZ_TYPE,
 )
-from simulariumio.exceptions import InputDataError
 
 data = SmoldynData(
     smoldyn_file=InputFileData(
@@ -463,43 +461,3 @@ def test_typeMapping_with_3D_data(typeMapping, expected_typeMapping):
 )
 def test_bundleData_3D(bundleData, expected_bundleData):
     assert expected_bundleData == bundleData["data"]
-
-
-def test_input_file_error():
-    # malformed_smoldyn.txt is missing a column for some agents
-    malformed_data = SmoldynData(
-        smoldyn_file=InputFileData(
-            file_path="simulariumio/tests/data/malformed_data/malformed_smoldyn.txt"
-        )
-    )
-    with pytest.raises(InputDataError):
-        SmoldynConverter(malformed_data)
-
-    # also expect an error for a file of the wrong file type
-    wrong_file = SmoldynData(
-        smoldyn_file=InputFileData(file_path="simulariumio/tests/data/readdy/test.h5")
-    )
-    with pytest.raises(InputDataError):
-        SmoldynConverter(wrong_file)
-
-
-def test_callback_fn():
-    data = SmoldynData(
-        smoldyn_file=InputFileData(
-            file_path="simulariumio/tests/data/smoldyn/example_2D.txt"
-        )
-    )
-    callback_fn_0 = Mock()
-    call_interval = 0.000000001
-    SmoldynConverter(data, callback_fn_0, call_interval)
-    assert callback_fn_0.call_count > 1
-
-    # calls to the callback function should be strictly increasing
-    # and the value should never exceed 1.0 (100%)
-    call_list = callback_fn_0.call_args_list
-    last_call_val = 0.0
-    for call in call_list:
-        call_value = call.args[0]
-        assert call_value > last_call_val
-        assert call_value <= 1.0
-        last_call_val = call_value

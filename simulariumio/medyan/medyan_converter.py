@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from typing import List, Callable
+from typing import List
 import math
 
 from ..trajectory_converter import TrajectoryConverter
@@ -19,7 +19,6 @@ from ..constants import (
     VALUES_PER_3D_POINT,
     SUBPOINT_VALUES_PER_ITEM,
 )
-from ..exceptions import InputDataError
 from .medyan_data import MedyanData
 
 ###############################################################################
@@ -30,12 +29,7 @@ log = logging.getLogger(__name__)
 
 
 class MedyanConverter(TrajectoryConverter):
-    def __init__(
-        self,
-        input_data: MedyanData,
-        progress_callback: Callable[[float], None] = None,
-        callback_interval: float = 10,
-    ):
+    def __init__(self, input_data: MedyanData):
         """
         This object reads simulation trajectory outputs
         from MEDYAN (http://medyan.org/)
@@ -47,17 +41,7 @@ class MedyanConverter(TrajectoryConverter):
         input_data : MedyanData
             An object containing info for reading
             MEDYAN simulation trajectory outputs and plot data
-        progress_callback : Callable[[float], None] (optional)
-            Callback function that accepts 1 float argument and returns None
-            which will be called at a given progress interval, determined by
-            callback_interval requested, providing the current percent progress
-            Default: None
-        callback_interval : float (optional)
-            If a progress_callback was provided, the period between updates
-            to be sent to the callback, in seconds
-            Default: 10
         """
-        super().__init__(input_data, progress_callback, callback_interval)
         self._data = self._read(input_data)
 
     @staticmethod
@@ -148,19 +132,13 @@ class MedyanConverter(TrajectoryConverter):
             result.max_agents = agents
         return result
 
-    def _get_trajectory_data(
-        self,
-        input_data: MedyanData,
-    ) -> AgentData:
+    @staticmethod
+    def _get_trajectory_data(input_data: MedyanData) -> AgentData:
         """
         Parse a MEDYAN snapshot.traj output file to get agents
         """
-        try:
-            lines = input_data.snapshot_file.get_contents().split("\n")
-            dimensions = MedyanConverter._parse_data_dimensions(lines, input_data)
-        except Exception as e:
-            raise InputDataError(f"Error reading input medyan data: {e}")
-
+        lines = input_data.snapshot_file.get_contents().split("\n")
+        dimensions = MedyanConverter._parse_data_dimensions(lines, input_data)
         result = AgentData.from_dimensions(dimensions)
         time_index = -1
         at_frame_start = True
@@ -179,8 +157,6 @@ class MedyanConverter(TrajectoryConverter):
         last_tid = 0
         object_type = ""
         draw_endpoints = False
-        line_count = 0
-
         for line in lines:
             if len(line) < 1:
                 at_frame_start = True
@@ -277,18 +253,16 @@ class MedyanConverter(TrajectoryConverter):
                 if draw_endpoints:
                     agent_index += 2
                     result.n_agents[time_index] += 2
-            line_count += 1
-            self.check_report_progress(line_count / len(lines))
-
         result.n_timesteps = time_index + 1
         return result
 
-    def _read(self, input_data: MedyanData) -> TrajectoryData:
+    @staticmethod
+    def _read(input_data: MedyanData) -> TrajectoryData:
         """
         Return an object containing the data shaped for Simularium format
         """
         print("Reading MEDYAN Data -------------")
-        agent_data = self._get_trajectory_data(input_data)
+        agent_data = MedyanConverter._get_trajectory_data(input_data)
         # get display data (geometry and color)
         for object_type in input_data.display_data:
             for tid in input_data.display_data[object_type]:

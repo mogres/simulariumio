@@ -3,7 +3,6 @@
 
 import numpy as np
 import pytest
-from unittest.mock import Mock
 
 from simulariumio.medyan import MedyanConverter, MedyanData
 from simulariumio import MetaData, DisplayData, InputFileData, JsonWriter
@@ -11,9 +10,8 @@ from simulariumio.constants import (
     DEFAULT_BOX_SIZE,
     DEFAULT_CAMERA_SETTINGS,
     VIZ_TYPE,
-    DISPLAY_TYPE,
+    DISPLAY_TYPE
 )
-from simulariumio.exceptions import InputDataError
 
 data = MedyanData(
     snapshot_file=InputFileData(file_path="simulariumio/tests/data/medyan/test.traj"),
@@ -482,38 +480,3 @@ def test_bundleData_drawing_endpoints(bundleData, expected_bundleData):
 
 def test_agent_ids_drawing_endpoints():
     assert JsonWriter._check_agent_ids_are_unique_per_frame(results_drawing_endpoints)
-
-
-def test_input_file_error():
-    # path to a file of the wrong format
-    wrong_file = MedyanData(
-        snapshot_file=InputFileData(file_path="simulariumio/tests/data/md/example.xyz"),
-    )
-    with pytest.raises(InputDataError):
-        MedyanConverter(wrong_file)
-
-    # file missing first frame start
-    invalid_traj = MedyanData(
-        snapshot_file=InputFileData(
-            file_path="simulariumio/tests/data/malformed_data/malformed_medyan.traj"
-        ),
-    )
-    with pytest.raises(InputDataError):
-        MedyanConverter(invalid_traj)
-
-
-def test_callback_fn():
-    callback_fn_0 = Mock()
-    call_interval = 0.000000001
-    MedyanConverter(data, callback_fn_0, call_interval)
-    assert callback_fn_0.call_count > 1
-
-    # calls to the callback function should be strictly increasing
-    # and the value should never exceed 1.0 (100%)
-    call_list = callback_fn_0.call_args_list
-    last_call_val = 0.0
-    for call in call_list:
-        call_value = call.args[0]
-        assert call_value > last_call_val
-        assert call_value <= 1.0
-        last_call_val = call_value
